@@ -84,38 +84,44 @@ def normal_closure_via_conjugation(
 
 def __random_bracket_sequence(n):
     """Generates a balanced sequence of n +1s and n -1s corresponding to correctly nested brackets."""
+    # Source: https://gist.github.com/rygorous/d57941fa5ae6beb59f17bc30793d3d75
     # "Generating binary trees at random", Atkinson & Sack, 1992
 
-    # Generate a randomly shuffled sequence of n +1s and n -1s
-    # These are steps 1 and 2 of the algorithm in the paper
     seq = [-1, 1] * n
     random.shuffle(seq)
-
-    # This now corresponds to a balanced bracket sequence (same number of
-    # opening and closing brackets), but it might not be well-formed
-    # (brackets closed before they open). Fix this up using the bijective
-    # map in the paper (step 3).
-    prefix = []
-    suffix = []
-    word = []
+    
+    prefix, suffix, word = [], [], []
     partial_sum = 0
+
     for s in seq:
         word.append(s)
         partial_sum += s
-        if partial_sum == 0: # at the end of an irreducible balanced word
-            if s == -1: # it was well-formed! append it.
+        if partial_sum == 0:
+            if s == -1:
                 prefix += word
             else:
-                # it was not well-formed! fix it.
                 prefix.append(1)
                 suffix = [-1] + [-x for x in word[1:-1]] + suffix
             word = []
-
     return prefix + suffix
 
-def __random_from_identities(depth, random_identity):
-    seq = __random_bracket_sequence(depth)
-
+def normal_closure_via_brackets(
+    closure: List[int],
+    freegroup_dimension: int, 
+    depth_method: str = 'uniform',
+    depth_parameters = {'radius': 5},
+    proba_conjugation: float = None,
+    proba_closure: float = None,
+    mind_reduction: bool = True,
+):
+    assert not proba_conjugation is None or not proba_closure is None
+    if not proba_conjugation is None:
+        proba_closure = 1 - proba_conjugation
+    if not proba_closure is None:
+        proba_conjugation = 1 - proba_closure    
+    
+    seq = __random_bracket_sequence(random_length(depth_method, **depth_parameters))
+    
     match, stack = [None] * len(seq), []
 
     for i, c in enumerate(seq):
@@ -129,29 +135,57 @@ def __random_from_identities(depth, random_identity):
             match[i2] = i1
 
     sampled = [None] * len(seq)
-
-    for idx, match_idx in enumerate(match):
-        sampled[idx], sampled[match_idx] = random_identity()
-        if random.random() > 0.5:
-            sampled[idx], sampled[match_idx] = sampled[match_idx], sampled[idx]
-    return reduce(lambda x, y: x + y, sampled)
-
-def normal_closure_via_brackets(closure: List[int], freegroup_dimension: int, depth_method: str = 'uniform', depth_parameters = {'radius': 20}):
-    def random_identity():
-        n = len(closure)
-        idx = random.choice(freegroup_dimension + 2 * n)
-        if idx < freegroup_dimension:
-            return [idx + 1], [-(idx + 1)]
-        idx -= freegroup_dimension
-        if idx <= n:
-            return closure[:idx], closure[idx:]
-        idx -= n
-        _closure = reciprocal(closure)
-        return _closure[:idx], _closure[idx:]
     
-    depth = random_length(depth_method, **depth_parameters)
-    return normalize(__random_from_identities(depth, random_identity))
+    for idx, match_idx in enumerate(match):
+        if match_idx < idx: continue
+        
+        coin = random.random()
+        
+        if (mind_reduction and idx + 1 == match_idx) or (coin <= proba_closure):
+            split = random.randint(low = 0, high = len(closure))
+            left, right = closure[:split], closure[split:]
+            if random.random() < 0.5: left, right = right, left
+            if random.random() < 0.5: left, right = reciprocal(left), reciprocal(right)
+            sampled[idx] = left
+            sampled[match_idx] = right
+            continue
+        coin -= proba_closure
 
+        if coin <= proba_conjugation:
+            probas = ones(2 * freegroup_dimension + 1)
+            probas[0 + freegroup_dimension] = 0
+            
+            if mind_reduction:
+                i = idx - 1
+                while i >= 0 and not sampled[i] is None:
+                    if not sampled[i]: i -= 1; continue
+                    probas[-sampled[i][-1] + freegroup_dimension] = 0; break
+
+                i = idx + 1
+                while i <= len(seq) - 1 and not sampled[i] is None:
+                    if not sampled[i]: i += 1; continue
+                    probas[-sampled[i][0] + freegroup_dimension] = 0
+
+                i = match_idx - 1
+                while i >= 0 and not sampled[i] is None:
+                    if not sampled[i]: i -=1; continue
+                    probas[sampled[i][-1] + freegroup_dimension] = 0; break
+
+                i = match_idx + 1
+                while i <= len(seq) - 1 and not sampled[i] is None:
+                    if not sampled[i]: i += 1; continue
+                    probas[sampled[i][0] + freegroup_dimension] = 0; break
+            
+            probas /= probas.sum()
+            conjugator = random.choice(2 * freegroup_dimension + 1, p = probas)
+            sampled[idx] = [conjugator - freegroup_dimension]
+            sampled[match_idx] = [freegroup_dimension - conjugator]
+            continue
+        coin -= proba_conjugation
+        
+    return normalize(reduce(lambda x, y: x + y, sampled))
+    
+    
 def normal_closure(method = 'conjugation', *args, **params):
     if method in ['conjugation', 'conj']:
         return normal_closure_via_conjugation(*args, **params)
