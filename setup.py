@@ -24,8 +24,8 @@ setup(
     zip_safe=False,
     python_requires=">=3.7",
     install_requires = [
-    	numpy,
-    	iteration_utilities,
-    	parsec,
+    	'numpy',
+    	'parsec',
+    	'iteration_utilities',
     ]
 )
