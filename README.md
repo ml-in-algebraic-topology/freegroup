@@ -1,6 +1,6 @@
 # Installation
 
-- `setuptools`. You need to make sure that you have `setuptools` installed.
+- `setuptools`.
     - `cd` to the cloned repository.
     - Run `python -m pip install -r requirements.txt`
     - Run `python -m pip install .`
