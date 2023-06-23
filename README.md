@@ -1,9 +1,11 @@
 # Installation
 
 - `setuptools`.
-    - `cd` to the cloned repository.
-    - Run `python -m pip install -r requirements.txt`
-    - Run `python -m pip install .`
+    ```
+    git clone https://github.com/ml-in-algebraic-topology/freegroup.git
+    python -m pip install -r freegroup/requirements.txt
+    python -m pip install ./freegroup
+    ```
 
 # Definitions
 
