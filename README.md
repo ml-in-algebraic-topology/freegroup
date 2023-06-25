@@ -4,7 +4,7 @@
     ```
     git clone https://github.com/ml-in-algebraic-topology/freegroup.git
     python -m pip install -r freegroup/requirements.txt
-    python -m pip install ./freegroup
+    cd freegroup && python setup.py install 
     ```
 
 # Definitions
