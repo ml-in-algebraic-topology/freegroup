@@ -2,7 +2,7 @@ from typing import List, Tuple, Iterable
 
 import math
 from iteration_utilities import repeatfunc
-from numpy import random
+from numpy import random, ones
 
 from ..tools import (
     reciprocal, normalize, conjugate, Comm, Mult
