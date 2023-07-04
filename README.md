@@ -62,6 +62,6 @@ This module helps to build **word** samplers for generating datasets
 - `normal_closure(method = ['conjugation', 'brackets'], closure, freegroup_dimension, **params)`. Random word from the normal closure `<closure>`
   ```py
   from freegroup.sampling import normal_closure
-  generator = normal_closure('brackets', [1], 4, depth_method = 'uniform', depth_parameters = {'radius': 10})  
+  generator = normal_closure('brackets', [1], 4, depth_method = 'uniform', depth_parameters = {'radius': 10}, proba_conjugation = 0.7)  
   ```
   `generator` will produce **word**s from `<x>` with uniform length from 2 to 20
