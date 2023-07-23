@@ -124,7 +124,7 @@ template<typename T> void derivative(
 template<typename T> py::array_t<T> magnus_coefficients(py::array_t<int> words, std::size_t generators_num, std::size_t modulo) {
     // auto words_buffer = words.request();
 
-    py::ssize_t dimension = static_cast<py::ssize_t>(std::pow(generators_num, modulo + 1)) / (generators_num - 1);
+    py::ssize_t dimension = static_cast<py::ssize_t>(std::pow(generators_num, modulo + 1) - 1) / (generators_num - 1);
     auto result = py::array_t<T>((words.shape(0) * dimension));
     result.resize({words.shape(0), dimension});
     // auto result_buffer = result.request();
