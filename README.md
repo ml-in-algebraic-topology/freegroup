@@ -3,7 +3,6 @@
 - `setuptools`.
     ```
     git clone https://github.com/ml-in-algebraic-topology/freegroup.git
-    python -m pip install -r freegroup/requirements.txt
     cd freegroup && python setup.py install 
     ```
 
