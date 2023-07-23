@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 __version__ = "0.0.1"
 
 ext_modules = [
-    Pybind11Extension("freegroup.derivatives",
+    Pybind11Extension("freegroup._derivatives",
         ["src/freegroup/derivatives/main.cpp"],
         define_macros = [('VERSION_INFO', __version__)],
         ),
@@ -14,7 +14,7 @@ setup(
     name="freegroup",
     version=__version__,
     author="F. Pavutnitskiy, D. Pasechnyuk, K. Brilliantov, G. Magai",
-    description="Module for operating with free group and calculating homotopy groups of spheres.",
+    description="Module for operating with free group",
     packages = find_packages(
         where='src',
     ),
@@ -23,9 +23,10 @@ setup(
     cmdclass={"build_ext": build_ext},
     zip_safe=False,
     python_requires=">=3.7",
-    install_requires = [
-    	'numpy',
-    	'parsec',
-    	'iteration_utilities',
-    ]
+    install_requires=[
+        'numpy',
+        'tqdm',
+        'parsec',
+        'iteration-utilities',
+    ],
 )

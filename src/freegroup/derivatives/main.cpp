@@ -147,7 +147,7 @@ template <typename T> py::array_t<T> derivative(py::array_t<int> words, std::siz
     return result;
 }
 
-PYBIND11_MODULE(derivatives, m) {
+PYBIND11_MODULE(_derivatives, m) {
     m.def(
         "magnus_coefficients",
         static_cast<py::array_t<long long>(*)(py::array_t<int>, std::size_t, std::size_t)>(&magnus_coefficients),

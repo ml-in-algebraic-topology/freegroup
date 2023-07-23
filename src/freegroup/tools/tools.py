@@ -150,18 +150,6 @@ class Normalize(Visitor):
 normalize = Normalize()
 batch_normalize = normalize.batch_visit
 
-
-from numpy import array, pad
-
-def to_numpy(word):
-    return array(flatten(word), int)
-
-def batch_to_numpy(words):
-    words = flatten.batch_visit(words)
-    max_length = max(map(len, words))
-    return array(list(map(lambda v: pad(v, (0, max_length - len(v))), words)))
-
-
 def is_trivial(word, closure = None):
     if closure is None: return not word
 
