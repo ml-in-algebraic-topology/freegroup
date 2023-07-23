@@ -1,8 +1,10 @@
 # Installation
 
 - `setuptools`.
-    ```
+    ```bash
     git clone https://github.com/ml-in-algebraic-topology/freegroup.git
+    ```
+    ```bash
     cd freegroup && python setup.py install 
     ```
 
