@@ -5,6 +5,9 @@
     git clone https://github.com/ml-in-algebraic-topology/freegroup.git
     ```
     ```bash
+    python -m pip install setuptools pybind11
+    ```
+    ```bash
     cd freegroup && python setup.py install 
     ```
 
