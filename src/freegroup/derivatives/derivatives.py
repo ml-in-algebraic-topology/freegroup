@@ -4,7 +4,7 @@ from ..tools import normalize, flatten, batch_normalize, batch_flatten, from_str
 from numpy import array, pad, ndarray, isscalar
 
 
-def to_numpy(arg, keepdim = False, **kwargs):
+def to_numpy(arg, keepdim = True, **kwargs):
     if isinstance(arg, ndarray):
         return arg
     
@@ -26,30 +26,37 @@ def to_numpy(arg, keepdim = False, **kwargs):
     n = max(map(len, words))
     arr = array(list(map(lambda v: pad(v, (0, n - len(v))), words)))
     
-    return arr if not keepdim else arr.reshape(-1) if ndim == 1 else arr
+    return arr if keepdim else arr.reshape(-1) if ndim == 1 else arr
     
 
-def magnus_coefficients(X, fdim, gamma, keepdim = False, **kwargs):
+def magnus_coefficients(X, fdim, gamma, keepdim = True, **kwargs):
     X = to_numpy(X, **kwargs)
 
     result = cpp.magnus_coefficients(X, fdim, gamma)
-    if keepdim and result.shape[0] == 1:
+    if not keepdim and result.shape[0] == 1:
         return result.reshape(-1)
     return result
 
 
-def derivative(X, fdim, wrt, keepdim = False, **kwargs):
+def derivative(X, fdim, wrt, keepdim = True, **kwargs):
     X = to_numpy(X, **kwargs)
     wrt = to_numpy(wrt, **kwargs)
     
     assert (wrt > 0).all(), "`with respect to` array should contain only positive indexes"
     
     result = cpp.derivative(X, fdim, wrt)
-    if keepdim and result.shape[0] == 1:
+    if not keepdim and result.shape[0] == 1:
         return result.reshape(-1)
     return result
     
+
+def max_gamma_contains(X, fdim, keepdim = True, **kwargs):
+    X = to_numpy(X, **kwargs)
     
+    result = cpp.max_gamma_contains(X, fdim)
+    if not keepdim and result.shape[0] == 1:
+        return result[0]
+    return result
 
 
 
