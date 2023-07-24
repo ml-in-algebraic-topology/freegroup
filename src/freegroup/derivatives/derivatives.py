@@ -1,7 +1,7 @@
 import freegroup._derivatives as cpp
 from ..tools import normalize, flatten, batch_normalize, batch_flatten, from_string, batch_from_string
 
-from numpy import array, pad, ndarray
+from numpy import array, pad, ndarray, isscalar
 
 
 def to_numpy(arg, keepdim = False, **kwargs):
@@ -15,12 +15,12 @@ def to_numpy(arg, keepdim = False, **kwargs):
         
     elif isinstance(arg, list) or isinstance(arg, tuple):
         assert len(arg) > 0, "empty word!"
-            
-        if isinstance(arg[0], int): ndim = 1; words = [arg]
-            
+        
         if isinstance(arg[0], str): ndim = 2; words = batch_from_string(arg, method = method)
-            
-        if isinstance(arg[0], list) or isinstance(arg[0], tuple): ndim = 2; words = arg
+        
+        elif isscalar(arg[0]): ndim = 1; words = [arg]
+        
+        else: ndim = 2; words = arg
     
     words = batch_normalize(batch_flatten(words))
     n = max(map(len, words))
