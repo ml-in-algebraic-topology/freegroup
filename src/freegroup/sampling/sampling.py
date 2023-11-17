@@ -47,11 +47,11 @@ def freegroup(freegroup_dimension, length_method, length_parameters):
     generators = [-x for x in range(1, freegroup_dimension + 1)] +\
         [x for x in range(1, freegroup_dimension + 1)]
     
-    result = [random.choice(generators)]
+    result = [random.choice(generators).item()]
     for _ in range(1, random_length(length_method, **length_parameters)):
         last, _last = generators_index(result[-1]), generators_index(-result[-1])
         dist[_last], dist[last] = 0, p
-        result.append(random.choice(generators, p = dist))
+        result.append(random.choice(generators, p = dist).item())
         dist[_last] = p
         
     return result
