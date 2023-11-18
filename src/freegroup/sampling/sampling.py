@@ -9,16 +9,19 @@ from ..tools import (
 )
 from functools import reduce
 
-def uniform_hyperbolic(radius: float):
-    return max(1, int(round(math.acosh(1 + random.random() * (math.cosh(radius) - 1)))))
+def uniform_hyperbolic(radius: float, generator = None, **kwargs):
+    generator = random if generator is None else generator
+    return max(1, int(round(math.acosh(1 + generator.random() * (math.cosh(radius) - 1)))))
 
-def almost_uniform_hyperbolic(radius: float):
-    return max(1, int(round(math.asinh(random.random() * math.cosh(radius - 1)))))
+def almost_uniform_hyperbolic(radius: float, generator = None, **kwargs):
+    generator = random if generator is None else generator
+    return max(1, int(round(math.asinh(generator.random() * math.cosh(radius - 1)))))
 
-def uniform(radius: float):
-    return max(1, int(round(random.random() * radius)))
+def uniform(radius: float, generator = None, **kwargs):
+    generator = random if generator is None else generator
+    return max(1, int(round(generator.random() * radius)))
 
-def constant(radius: float):
+def constant(radius: float, **kwargs): 
     return max(1, int(radius))
 
 def random_length(method = "uniform_hyperbolic", *args, **kwargs):
@@ -32,10 +35,11 @@ def random_length(method = "uniform_hyperbolic", *args, **kwargs):
         return uniform(*args, **kwargs)
     if method in ["constant", "c"]:
         return constant(*args, **kwargs)
-    
 
     
-def freegroup(freegroup_dimension, length_method, length_parameters):
+def freegroup(freegroup_dimension, length_method, length_parameters, generator = None):
+    rnd = random if generator is None else generator
+    
     def generators_index(generator):
         if generator < 0:
             return abs(generator) - 1
@@ -47,11 +51,11 @@ def freegroup(freegroup_dimension, length_method, length_parameters):
     generators = [-x for x in range(1, freegroup_dimension + 1)] +\
         [x for x in range(1, freegroup_dimension + 1)]
     
-    result = [random.choice(generators)]
-    for _ in range(1, random_length(length_method, **length_parameters)):
+    result = [rnd.choice(generators)]
+    for _ in range(1, random_length(length_method, generator = rnd, **length_parameters)):
         last, _last = generators_index(result[-1]), generators_index(-result[-1])
         dist[_last], dist[last] = 0, p
-        result.append(random.choice(generators, p = dist))
+        result.append(rnd.choice(generators, p = dist))
         dist[_last] = p
         
     return result
