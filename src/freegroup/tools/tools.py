@@ -407,7 +407,7 @@ def permute_generators(word, permutation = "cycle_shift", fdim = None, **kwargs)
     raise ValueError(f'Unknown value of `permutation`: {permutation}')
 
 def cycle_shift_invariant_similarity(
-    s1, s2, metric_fn, fdim = None, reduction = None, **metric_kwargs
+    s1, s2, metric_name = 'edit_distance', fdim = None, reduction = None, **metric_kwargs
 ):
     fdim = max(determine_fdim(s1, fdim), determine_fdim(s2, fdim))
     
