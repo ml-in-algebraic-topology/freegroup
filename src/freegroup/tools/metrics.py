@@ -2,7 +2,8 @@ from nltk.metrics.distance import *
 from multiprocess import Pool
 from tqdm.auto import tqdm
 import numpy as np
-from ..tools import determine_fdim, generators, permute_generators
+from .tools import determine_fdim, generators, permute_generators
+from .helper import remove_prefix
 
 
 def cycle_shift_invariant_similarity(
@@ -37,26 +38,21 @@ def cycle_shift_invariant_similarity(
     
     return reduction(results)
 
+
 def batch_cycle_shift_invariant_similarity(
     words, fdim = None, **kwargs
 ):
     fdim = max([determine_fdim(w, fdim) for w in words])
     
-    def remove_prefix(prefix):
-        result = {}
-        keys = list(filter(lambda x: x.startswith(prefix), kwargs.keys()))
-        for k in keys: result[k[len(prefix) + 1:]] = kwargs.pop(k)
-        return result
-    
-    pool_kwargs = remove_prefix('pool')
+    pool_kwargs = remove_prefix('pool', kwargs)
     pool_workers = pool_kwargs.pop('workers', 1)
     
-    map_kwargs = remove_prefix('map')
+    map_kwargs = remove_prefix('map', kwargs)
     map_chunksize = map_kwargs.pop('chunksize', pool_workers * 10)
     
-    tqdm_kwargs = remove_prefix('tqdm')
+    tqdm_kwargs = remove_prefix('tqdm', kwargs)
     
-    metric_kwargs = remove_prefix('metric')
+    metric_kwargs = remove_prefix('metric', kwargs)
     metric_name = metric_kwargs.pop('name', 'edit_distance')
     metric_reduction = metric_kwargs.pop('reduction', None)
     metric_self = metric_kwargs.pop('self', 0)

@@ -2,60 +2,69 @@ from typing import List, Tuple, Iterable
 
 import math
 from iteration_utilities import repeatfunc
-from numpy import random, ones
+import numpy as np
 
 from ..tools import (
     reciprocal, normalize, conjugate, Comm, Mult
 )
+
+from ..tools.helper import value_or_default, remove_prefix
+
 from functools import reduce
 
-def uniform_hyperbolic(radius: float, generator = None, **kwargs):
-    generator = random if generator is None else generator
-    return max(1, int(round(math.acosh(1 + generator.random() * (math.cosh(radius) - 1)))))
+DEFAULT_RNG = np.random.default_rng()
 
-def almost_uniform_hyperbolic(radius: float, generator = None, **kwargs):
-    generator = random if generator is None else generator
-    return max(1, int(round(math.asinh(generator.random() * math.cosh(radius - 1)))))
 
-def uniform(radius: float, generator = None, **kwargs):
-    generator = random if generator is None else generator
-    return max(1, int(round(generator.random() * radius)))
+def uniform_hyperbolic(radius: float, rng = None, **kwargs):
+    rng = value_or_default(rng, DEFAULT_RNG)
+    return max(1, int(round(math.acosh(1 + rng.random() * (np.cosh(radius) - 1)))))
+
+def almost_uniform_hyperbolic(radius: float, rng = None, **kwargs):
+    rng = value_or_default(rng, DEFAULT_RNG)
+    return max(1, int(round(math.asinh(rng.random() * np.cosh(radius - 1)))))
+
+def uniform(radius: float, rng = None, **kwargs):
+    rng = value_or_default(rng, DEFAULT_RNG)
+    return max(1, int(round(rng.random() * radius)))
 
 def constant(radius: float, **kwargs): 
     return max(1, int(radius))
 
-def random_length(method = "uniform_hyperbolic", *args, **kwargs):
+def random_length(method = 'uniform_hyperbolic', *args, **kwargs):
     if not isinstance(method, str):
         return method(*args, **kwargs)
-    if method in ["uniform_hyperbolic", "uh"]:
+    if method in ['uniform_hyperbolic', 'uh']:
         return uniform_hyperbolic(*args, **kwargs)
-    if method in ["almost_uniform_hyperbolic", "auh"]:
+    if method in ['almost_uniform_hyperbolic', 'auh']:
         return almost_uniform_hyperbolic(*args, **kwargs)
-    if method in ["uniform", "u"]:
+    if method in ['uniform', 'u']:
         return uniform(*args, **kwargs)
-    if method in ["constant", "c"]:
+    if method in ['constant', 'c']:
         return constant(*args, **kwargs)
 
     
-def freegroup(freegroup_dimension, length_method, length_parameters, generator = None):
-    rnd = random if generator is None else generator
+def freegroup(fdim, rng = None, **kwargs):
+    
+    rng = value_or_default(rng, DEFAULT_RNG)
+    
+    length_kwargs = remove_prefix("length", kwargs)
     
     def generators_index(generator):
         if generator < 0:
             return abs(generator) - 1
-        return freegroup_dimension + abs(generator) - 1
+        return fdim + abs(generator) - 1
     
-    p = 1 / (2 * freegroup_dimension - 1)
+    p = 1 / (2 * fdim - 1)
     
-    dist = [p for _ in range(2 * freegroup_dimension)]
-    generators = [-x for x in range(1, freegroup_dimension + 1)] +\
-        [x for x in range(1, freegroup_dimension + 1)]
+    dist = [p for _ in range(2 * fdim)]
+    generators = [-x for x in range(1, fdim + 1)] +\
+        [x for x in range(1, fdim + 1)]
     
-    result = [rnd.choice(generators).item()]
-    for _ in range(1, random_length(length_method, generator = rnd, **length_parameters)):
+    result = [rng.choice(generators).item()]
+    for _ in range(1, random_length(rng = rng, **length_kwargs)):
         last, _last = generators_index(result[-1]), generators_index(-result[-1])
         dist[_last], dist[last] = 0, p
-        result.append(rnd.choice(generators, p = dist).item())
+        result.append(rng.choice(generators, p = dist).item())
         dist[_last] = p
         
     return result
@@ -66,17 +75,22 @@ def freegroup_generator(*args, **kwargs):
     
 def normal_closure_via_conjugation(
     closure: List[int],
-    freegroup_dimension: int = 2,
-    length_method: str = 'uh',
-    length_parameters = {'radius': 5},
-    conjugator_length_method: str ='uh',
-    conjugator_length_parameters = {'radius': 5}
+    fdim: int = 2,
+    rng = None,
+    **kwargs,
 ):
-    length = random_length(length_method, **length_parameters)
+  
+    rng = value_or_default(rng, DEFAULT_RNG)
+    
+    length_kwargs = remove_prefix('length', kwargs)
+    length = random_length(rng = rng, **length_kwargs)
+    
+    conjugator_kwargs = remove_prefix('conjugator', kwargs)
+    
     result = []
     while True:
-        factor = closure if random.random() > 0.5 else reciprocal(closure)
-        conjugator = freegroup(freegroup_dimension, conjugator_length_method, conjugator_length_parameters)
+        factor = closure if rng.random() > 0.5 else reciprocal(closure)
+        conjugator = freegroup(fdim = fdim, rng = rng, **conjugator_kwargs)
         new_result = result + conjugate(factor, conjugator)
         new_result = normalize(new_result)
         if len(new_result) > length:
@@ -86,13 +100,15 @@ def normal_closure_via_conjugation(
     return result
 
 
-def __random_bracket_sequence(n):
+def __random_bracket_sequence(n, rng = None):
     """Generates a balanced sequence of n +1s and n -1s corresponding to correctly nested brackets."""
     # Source: https://gist.github.com/rygorous/d57941fa5ae6beb59f17bc30793d3d75
     # "Generating binary trees at random", Atkinson & Sack, 1992
+    
+    rng = value_or_default(rng, DEFAULT_RNG)
 
     seq = [-1, 1] * n
-    random.shuffle(seq)
+    rng.shuffle(seq)
     
     prefix, suffix, word = [], [], []
     partial_sum = 0
@@ -111,20 +127,27 @@ def __random_bracket_sequence(n):
 
 def normal_closure_via_brackets(
     closure: List[int],
-    freegroup_dimension: int, 
-    depth_method: str = 'uniform',
-    depth_parameters = {'radius': 5},
-    proba_conjugation: float = None,
-    proba_closure: float = None,
+    fdim: int,
+    rng = None,
     mind_reduction: bool = True,
+    **kwargs,
 ):
-    assert not proba_conjugation is None or not proba_closure is None
-    if not proba_conjugation is None:
-        proba_closure = 1 - proba_conjugation
-    if not proba_closure is None:
-        proba_conjugation = 1 - proba_closure    
     
-    seq = __random_bracket_sequence(random_length(depth_method, **depth_parameters))
+    rng = value_or_default(rng, DEFAULT_RNG)
+    
+    proba_kwargs = remove_prefix('proba', kwargs)
+    pconjugation, pclosure =\
+        proba_kwargs.get('conjugation', None), proba_kwargs.get('closure', None)
+    if pconjugation is None and pclosure is None:
+        pconjugation = 1.
+    if not pconjugation is None:
+        pclosure = 1 - pconjugation
+    if not pclosure is None:
+        pconjugation = 1 - pclosure
+    
+    depth_kwargs = remove_prefix('depth', kwargs)
+    depth = random_length(rng = rng, **depth_kwargs)
+    seq = __random_bracket_sequence(n = depth, rng = rng)
     
     match, stack = [None] * len(seq), []
 
@@ -143,49 +166,49 @@ def normal_closure_via_brackets(
     for idx, match_idx in enumerate(match):
         if match_idx < idx: continue
         
-        coin = random.random()
+        coin = rng.random()
         
-        if (mind_reduction and idx + 1 == match_idx) or (coin <= proba_closure):
-            split = random.randint(low = 0, high = len(closure))
+        if (mind_reduction and idx + 1 == match_idx) or (coin <= pclosure):
+            split = rng.integers(low = 0, high = len(closure))
             left, right = closure[:split], closure[split:]
-            if random.random() < 0.5: left, right = right, left
-            if random.random() < 0.5: left, right = reciprocal(left), reciprocal(right)
+            if rng.random() < 0.5: left, right = right, left
+            if rng.random() < 0.5: left, right = reciprocal(left), reciprocal(right)
             sampled[idx] = left
             sampled[match_idx] = right
             continue
-        coin -= proba_closure
+        coin -= pclosure
 
-        if coin <= proba_conjugation:
-            probas = ones(2 * freegroup_dimension + 1)
-            probas[0 + freegroup_dimension] = 0
+        if coin <= pconjugation:
+            probas = np.ones(2 * fdim + 1)
+            probas[0 + fdim] = 0
             
             if mind_reduction:
                 i = idx - 1
                 while i >= 0 and not sampled[i] is None:
                     if not sampled[i]: i -= 1; continue
-                    probas[-sampled[i][-1] + freegroup_dimension] = 0; break
+                    probas[-sampled[i][-1] + fdim] = 0; break
 
                 i = idx + 1
                 while i <= len(seq) - 1 and not sampled[i] is None:
                     if not sampled[i]: i += 1; continue
-                    probas[-sampled[i][0] + freegroup_dimension] = 0
+                    probas[-sampled[i][0] + fdim] = 0
 
                 i = match_idx - 1
                 while i >= 0 and not sampled[i] is None:
                     if not sampled[i]: i -=1; continue
-                    probas[sampled[i][-1] + freegroup_dimension] = 0; break
+                    probas[sampled[i][-1] + fdim] = 0; break
 
                 i = match_idx + 1
                 while i <= len(seq) - 1 and not sampled[i] is None:
                     if not sampled[i]: i += 1; continue
-                    probas[sampled[i][0] + freegroup_dimension] = 0; break
+                    probas[sampled[i][0] + fdim] = 0; break
             
             probas /= probas.sum()
-            conjugator = random.choice(2 * freegroup_dimension + 1, p = probas)
-            sampled[idx] = [conjugator - freegroup_dimension]
-            sampled[match_idx] = [freegroup_dimension - conjugator]
+            conjugator = rng.choice(2 * fdim + 1, p = probas)
+            sampled[idx] = [conjugator - fdim]
+            sampled[match_idx] = [fdim - conjugator]
             continue
-        coin -= proba_conjugation
+        coin -= pconjugation
         
     return normalize(reduce(lambda x, y: x + y, sampled))
     
@@ -208,22 +231,30 @@ def normal_closure_generator(method = 'conjugation', *args, **params):
 
 def random_tree(
     words: List[List[int]],
-    **params,
+    rng = None,
+    **kwargs,
 ):
-    def p_mult(): return params.get('p_mult', 0.)
-    def p_comm(): return params.get('p_comm', 1.)
+    rng = value_or_default(rng, DEFAULT_RNG)
+    
+    pmult = kwargs.get('pmult', 0.)
+    pcomm = kwargs.get('pcomm', 1.)
+    
+    assert pmult + pcomm == 1.
     
     if len(words) == 0: return []
     if len(words) == 1: return words[0]
     
-    coin = random.random()
-    if coin <= p_mult():
+    coin = rng.random()
+    if coin <= pmult:
         return Mult(words)
-    coin -= p_mult()
+    coin -= pmult
     
-    if coin <= p_comm():
-        idx = random.randint(1, len(words))
-        return Comm([random_tree(words[:idx], **params), random_tree(words[idx:], **params)])
-    coin -= p_comm()
+    if coin <= pcomm:
+        idx = rng.integers(1, len(words))
+        return Comm([
+            random_tree(words[:idx], rng = rng, **kwargs),
+            random_tree(words[idx:], rng = rng, **kwargs)
+        ])
     
-    assert p_mult() + p_comm() == 1.
+    coin -= pcomm
+    
