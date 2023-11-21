@@ -12,6 +12,9 @@ from ..tools.helper import value_or_default, remove_prefix
 
 from functools import reduce
 
+from copy import deepcopy
+
+
 DEFAULT_RNG = np.random.default_rng()
 
 
@@ -23,12 +26,18 @@ def almost_uniform_hyperbolic(radius: float, rng = None, **kwargs):
     rng = value_or_default(rng, DEFAULT_RNG)
     return max(1, int(round(math.asinh(rng.random() * np.cosh(radius - 1)))))
 
-def uniform(radius: float, rng = None, **kwargs):
+def uniform(radius: float, allow_zero: bool = False, rng = None, **kwargs):
     rng = value_or_default(rng, DEFAULT_RNG)
-    return max(1, int(round(rng.random() * radius)))
+    result = int(round(rng.random() * radius))
+    if allow_zero: return result
+    return max(1, result)
 
-def constant(radius: float, **kwargs): 
+def constant(radius: float, allow_zero: bool = False, **kwargs): 
+    if allow_zero: return int(radius)
     return max(1, int(radius))
+
+def contant_value(value: int, **kwargs):
+    return value
 
 def random_length(method = 'uniform_hyperbolic', *args, **kwargs):
     if not isinstance(method, str):
@@ -41,13 +50,19 @@ def random_length(method = 'uniform_hyperbolic', *args, **kwargs):
         return uniform(*args, **kwargs)
     if method in ['constant', 'c']:
         return constant(*args, **kwargs)
+    if method in ['constant_value', 'cv']:
+        return contant_value(*args, **kwargs)
+    raise ValueError('Unknown distribution over lengths')
 
     
-def freegroup(fdim, rng = None, **kwargs):
+def freegroup(fdim: int, prefix: List[int] = None, rng = None, **kwargs):
+    
+    kwargs = deepcopy(kwargs)
     
     rng = value_or_default(rng, DEFAULT_RNG)
     
-    length_kwargs = remove_prefix("length", kwargs)
+    length_kwargs = remove_prefix('length', kwargs)
+    length = random_length(rng = rng, **length_kwargs)
     
     def generators_index(generator):
         if generator < 0:
@@ -60,41 +75,68 @@ def freegroup(fdim, rng = None, **kwargs):
     generators = [-x for x in range(1, fdim + 1)] +\
         [x for x in range(1, fdim + 1)]
     
-    result = [rng.choice(generators).item()]
-    for _ in range(1, random_length(rng = rng, **length_kwargs)):
+    result = prefix[::] if not prefix is None else []
+    if not result:
+        result.append(rng.choice(generators).item())
+    for _ in range(length - len(result)):
         last, _last = generators_index(result[-1]), generators_index(-result[-1])
         dist[_last], dist[last] = 0, p
         result.append(rng.choice(generators, p = dist).item())
         dist[_last] = p
         
-    return result
+    return result[:length]
+
 
 def freegroup_generator(*args, **kwargs):
     return repeatfunc(lambda: freegroup(*args, **kwargs))
-        
-    
+
+
 def normal_closure_via_conjugation(
-    closure: List[int],
-    fdim: int = 2,
-    rng = None,
-    **kwargs,
-):
+    closure: List[int], fdim: int,
+    rng = None, **kwargs,
+):  
+    kwargs = deepcopy(kwargs)
   
     rng = value_or_default(rng, DEFAULT_RNG)
     
     length_kwargs = remove_prefix('length', kwargs)
     length = random_length(rng = rng, **length_kwargs)
     
-    conjugator_kwargs = remove_prefix('conjugator', kwargs)
+    previous_suffix_kwargs = remove_prefix('suffix_length', kwargs)
+    previous_suffix_kwargs['allow_zero'] = True
+    previous_suffix_radius = previous_suffix_kwargs.get('radius', length)
     
-    result = []
+    conjugator_kwargs = remove_prefix('conjugator', kwargs)
+    conjugator_length_radius = min((length - len(closure)) // 2, conjugator_kwargs.get('length_radius', length))
+    conjugator_kwargs['length_allow_zero'] = False
+    
+    if kwargs: raise ValueError(f'Unknown arguments: {kwargs}')
+    
+    result, previous_conjugator = [], []
     while True:
         factor = closure if rng.random() > 0.5 else reciprocal(closure)
-        conjugator = freegroup(fdim = fdim, rng = rng, **conjugator_kwargs)
-        new_result = result + conjugate(factor, conjugator)
-        new_result = normalize(new_result)
+                
+        previous_suffix_kwargs['radius'] = min(
+            len(previous_conjugator),
+            previous_suffix_radius
+        )
+        
+        k = random_length(rng = rng, **previous_suffix_kwargs)
+        
+        conjugator_kwargs['length_radius'] = min(
+            conjugator_length_radius,
+            (length - len(result) - len(closure) + 2 * k) // 2
+        )
+        previous_conjugator = freegroup(
+            fdim = fdim, rng = rng,
+            prefix = previous_conjugator[-k:][::-1], **conjugator_kwargs
+        )[::-1]
+                
+        new_result = normalize(result + conjugate(factor, previous_conjugator))
+        
         if len(new_result) > length:
             break
+        
         result = new_result
 
     return result
@@ -134,6 +176,8 @@ def normal_closure_via_brackets(
 ):
     
     rng = value_or_default(rng, DEFAULT_RNG)
+    
+    kwargs = deepcopy(kwargs)
     
     proba_kwargs = remove_prefix('proba', kwargs)
     pconjugation, pclosure =\

@@ -28,5 +28,6 @@ setup(
         'tqdm',
         'parsec',
         'iteration-utilities',
+        'nltk',
     ],
 )

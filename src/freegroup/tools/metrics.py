@@ -2,8 +2,32 @@ from nltk.metrics.distance import *
 from multiprocess import Pool
 from tqdm.auto import tqdm
 import numpy as np
-from .tools import determine_fdim, generators, permute_generators
+from .tools import (
+    determine_fdim, generators, permute_generators, reduce_modulo_normal_closure_step, substitute_generators, reciprocal
+)
 from .helper import remove_prefix
+
+def dyck_path(word, closure):
+    stack, path = [], [0]
+    substitutions = {
+        closure[0]: reciprocal(closure[1:]),
+        -closure[0]: closure[1:],
+    }
+    for f in substitute_generators(word, substitutions):
+        reduce_modulo_normal_closure_step(stack, f, closure)
+        path.append(len(stack))
+        
+    return path
+
+def number_of_valleys(path = None, word = None, closure = None):
+    if path is None:
+        path = dyck_path(word, closure)
+
+    result = 0
+    for idx in range(1, len(path) - 1):
+        if path[idx - 1] > path[idx] and path[idx] < path[idx + 1] and path[idx] > 0:
+            result += 1
+    return result
 
 
 def cycle_shift_invariant_similarity(

@@ -124,7 +124,7 @@ class Normalize(Visitor):
             return right, left
         return left, right
     
-    def visit_word(self, word): return reduce_modulo_singleton_normal_closure(word)
+    def visit_word(self, word): return reduce_modulo_normal_closure(word)
 
     def visit_comm(self, children):
         children = list(map(self, children))
@@ -138,7 +138,7 @@ class Normalize(Visitor):
         
         for x in map(self, children):
             if isinstance(x, list) and result and isinstance(result[-1], list):
-                result[-1] = reduce_modulo_singleton_normal_closure(result[-1] + x)
+                result[-1] = reduce_modulo_normal_closure(result[-1] + x)
             else:
                 result.append(x)
                 
@@ -165,7 +165,7 @@ def batch_is_trivial(words, closure = None):
     return [is_trivial(x, closure) for x in words]
 
 
-def reduce_modulo_singleton_normal_closure_step(reduced, token, closure = None):
+def reduce_modulo_normal_closure_step(reduced, token, closure = None):
     reduced.append(token)
 
     if len(reduced) >= 2 and reduced[-2] == -reduced[-1]:
@@ -175,23 +175,23 @@ def reduce_modulo_singleton_normal_closure_step(reduced, token, closure = None):
         if is_trivial(reduced[-len(closure):], closure):
             del reduced[-len(closure):]
 
-def reduce_modulo_singleton_normal_closure(word, closure = None):
+def reduce_modulo_normal_closure(word, closure = None):
     word = flatten(word)
 
     reduced = []
-    for token in word: reduce_modulo_singleton_normal_closure_step(reduced, token, closure)
+    for token in word: reduce_modulo_normal_closure_step(reduced, token, closure)
             
     return reduced
 
-def batch_reduce_modulo_singleton_normal_closure(words, closure = None):
-    return [reduce_modulo_singleton_normal_closure(x, closure) for x in words]
+def batch_reduce_modulo_normal_closure(words, closure = None):
+    return [reduce_modulo_normal_closure(x, closure) for x in words]
 
-def is_from_singleton_normal_closure(word, closure = None):
-    return len(reduce_modulo_singleton_normal_closure(word, closure)) == 0
+def is_from_normal_closure(word, closure = None):
+    return len(reduce_modulo_normal_closure(word, closure)) == 0
 
 
-def batch_is_from_singleton_normal_closure(words, closure = None):
-    return [is_from_singleton_normal_closure(x, closure) for x in words]
+def batch_is_from_normal_closure(words, closure = None):
+    return [is_from_normal_closure(x, closure) for x in words]
 
 
 @dataclass
@@ -373,17 +373,20 @@ def generators(fdim, t = "all"):
 
 def determine_fdim(word, fdim = None):
     if not fdim is None: return fdim
-    return len(set(map(abs, word)))
+    return max(map(abs, word))
+
+def substitute_generators(word, substitutions):
+    fdim = determine_fdim(word)
+    for x in generators(fdim):
+        if not x in substitutions:
+            substitutions[x] = x
+    substituted = [substitutions[x] for x in word]
+    return reduce(lambda x, y: x + y if isinstance(y, list) else x + [y], substituted, [])
 
 def permute_generators(word, permutation = "cycle_shift", fdim = None, **kwargs):
-    def _permute_generators(word, permutation):
-        try:
-            return [permutation[x] for x in word]
-        except KeyError:
-            raise ValueError(f'fdim of `word` and `permutation` does not correspond')
     
     if isinstance(permutation, dict):
-        return _permute_generators(word, permutation)
+        return substitute_generators(word, permutation)
     
     fdim = determine_fdim(word, fdim = fdim)
     
@@ -398,6 +401,6 @@ def permute_generators(word, permutation = "cycle_shift", fdim = None, **kwargs)
         for x in generators(fdim, t = "positive"):
             permutation[x] = (x - 1 + shift) % fdim + 1
             
-        return _permute_generators(word, permutation)
+        return substitute_generators(word, permutation)
     raise ValueError(f'Unknown value of `permutation`: {permutation}')
 
