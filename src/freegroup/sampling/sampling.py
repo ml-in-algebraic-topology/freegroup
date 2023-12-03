@@ -8,58 +8,41 @@ from ..tools import (
     reciprocal, normalize, conjugate, Comm, Mult
 )
 
-from ..tools.helper import value_or_default, remove_prefix
+from ..tools.helper import remove_prefix
+from ._helper import get_rng
 
 from functools import reduce
 
 from copy import deepcopy
 
 
-DEFAULT_RNG = np.random.default_rng()
+def geometric(low: int = 0, high: int = 10, p: float = 0.5, size = None, rng = 0, **kwargs):
+    x = get_rng(rng).geometric(p = p, size = size)
+    return np.where(x <= high + 1 - low, high + 1 - x, low)
 
+def uniform(low: int = 0, high: int = 10, size = None, rng = 0, **kwargs):
+    return get_rng(rng).integers(low = low, high = high, size = size)
 
-def uniform_hyperbolic(radius: float, rng = None, **kwargs):
-    rng = value_or_default(rng, DEFAULT_RNG)
-    return max(1, int(round(math.acosh(1 + rng.random() * (np.cosh(radius) - 1)))))
+def constant(value: int, size = None, rng = 0, **kwargs):
+    return value if size is None else value * np.ones(size)
 
-def almost_uniform_hyperbolic(radius: float, rng = None, **kwargs):
-    rng = value_or_default(rng, DEFAULT_RNG)
-    return max(1, int(round(math.asinh(rng.random() * np.cosh(radius - 1)))))
-
-def uniform(radius: float, allow_zero: bool = False, rng = None, **kwargs):
-    rng = value_or_default(rng, DEFAULT_RNG)
-    result = int(round(rng.random() * radius))
-    if allow_zero: return result
-    return max(1, result)
-
-def constant(radius: float, allow_zero: bool = False, **kwargs): 
-    if allow_zero: return int(radius)
-    return max(1, int(radius))
-
-def contant_value(value: int, **kwargs):
-    return value
-
-def random_length(method = 'uniform_hyperbolic', *args, **kwargs):
+def random_length(method = 'geom', *args, **kwargs):
     if not isinstance(method, str):
         return method(*args, **kwargs)
-    if method in ['uniform_hyperbolic', 'uh']:
-        return uniform_hyperbolic(*args, **kwargs)
-    if method in ['almost_uniform_hyperbolic', 'auh']:
-        return almost_uniform_hyperbolic(*args, **kwargs)
+    if method in ['geometric', 'geom', 'g']:
+        return geometric(*args, **kwargs)
     if method in ['uniform', 'u']:
         return uniform(*args, **kwargs)
     if method in ['constant', 'c']:
         return constant(*args, **kwargs)
-    if method in ['constant_value', 'cv']:
-        return contant_value(*args, **kwargs)
     raise ValueError('Unknown distribution over lengths')
 
     
-def freegroup(fdim: int, prefix: List[int] = None, rng = None, **kwargs):
+def freegroup(fdim: int, prefix: List[int] = None, rng = 0, **kwargs):
     
     kwargs = deepcopy(kwargs)
     
-    rng = value_or_default(rng, DEFAULT_RNG)
+    rng = get_rng(rng)
     
     length_kwargs = remove_prefix('length', kwargs)
     length = random_length(rng = rng, **length_kwargs)
@@ -93,11 +76,11 @@ def freegroup_generator(*args, **kwargs):
 
 def normal_closure_via_conjugation(
     closure: List[int], fdim: int,
-    rng = None, **kwargs,
+    rng = 0, **kwargs,
 ):  
     kwargs = deepcopy(kwargs)
   
-    rng = value_or_default(rng, DEFAULT_RNG)
+    rng = get_rng(rng)
     
     length_kwargs = remove_prefix('length', kwargs)
     length = random_length(rng = rng, **length_kwargs)
@@ -142,12 +125,12 @@ def normal_closure_via_conjugation(
     return result
 
 
-def __random_bracket_sequence(n, rng = None):
+def __random_bracket_sequence(n, rng = 0):
     """Generates a balanced sequence of n +1s and n -1s corresponding to correctly nested brackets."""
     # Source: https://gist.github.com/rygorous/d57941fa5ae6beb59f17bc30793d3d75
     # "Generating binary trees at random", Atkinson & Sack, 1992
     
-    rng = value_or_default(rng, DEFAULT_RNG)
+    rng = get_rng(rng)
 
     seq = [-1, 1] * n
     rng.shuffle(seq)
@@ -170,12 +153,12 @@ def __random_bracket_sequence(n, rng = None):
 def normal_closure_via_brackets(
     closure: List[int],
     fdim: int,
-    rng = None,
+    rng = 0,
     mind_reduction: bool = True,
     **kwargs,
 ):
     
-    rng = value_or_default(rng, DEFAULT_RNG)
+    rng = get_rng(rng)
     
     kwargs = deepcopy(kwargs)
     
@@ -275,10 +258,10 @@ def normal_closure_generator(method = 'conjugation', *args, **params):
 
 def random_tree(
     words: List[List[int]],
-    rng = None,
+    rng = 0,
     **kwargs,
 ):
-    rng = value_or_default(rng, DEFAULT_RNG)
+    rng = get_rng(rng)
     
     pmult = kwargs.get('pmult', 0.)
     pcomm = kwargs.get('pcomm', 1.)
