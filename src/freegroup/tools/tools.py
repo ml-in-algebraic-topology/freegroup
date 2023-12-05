@@ -50,7 +50,7 @@ class Flatten(Visitor):
         return reduce(lambda x, y: reciprocal(x) + reciprocal(y) + x + y, map(self, children))
 
     def visit_mult(self, children):
-        return reduce(lambda x, y: x + y, map(self, children))
+        return reduce(lambda x, y: x + y, map(self, children), [])
 
 flatten = Flatten()
 batch_flatten = flatten.batch_visit
