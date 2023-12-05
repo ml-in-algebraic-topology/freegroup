@@ -9,7 +9,7 @@ from ..tools import (
 )
 
 from ..tools.helper import remove_prefix
-from ._helper import get_rng
+from .helper import get_rng
 
 from functools import reduce
 
