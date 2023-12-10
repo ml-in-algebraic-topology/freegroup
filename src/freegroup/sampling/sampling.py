@@ -38,14 +38,8 @@ def random_length(method = 'geom', *args, **kwargs):
     raise ValueError('Unknown distribution over lengths')
 
     
-def freegroup(fdim: int, prefix: List[int] = None, rng = 0, **kwargs):
-    
-    kwargs = deepcopy(kwargs)
-    
+def freegroup(fdim: int, length: int, prefix: List[int] = None, rng = 0,): 
     rng = get_rng(rng)
-    
-    length_kwargs = remove_prefix('length', kwargs)
-    length = random_length(rng = rng, **length_kwargs)
     
     def generators_index(generator):
         if generator < 0:
