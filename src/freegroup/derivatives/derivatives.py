@@ -53,7 +53,7 @@ def derivative(X, fdim, wrt, keepdim = True, **kwargs):
 def max_gamma_contains(X, fdim, keepdim = True, **kwargs):
     X = to_numpy(X, **kwargs)
     
-    result = cpp.max_gamma_contains(X, fdim)
+    result = cpp.max_gamma_contains(X, fdim) + 1
     if not keepdim and result.shape[0] == 1:
         return result[0]
     return result

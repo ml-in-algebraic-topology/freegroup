@@ -126,10 +126,10 @@ int max_gamma_contains(
         }
         previous_prefixes.swap(current_prefixes);
         
-        if (!std::all_of(
+        if (std::any_of(
             previous_prefixes.cbegin(),
             previous_prefixes.cend(),
-            [](const std::vector<std::pair<int, long long>>& prefix) { return prefix.size() == 0 || prefix.back().second == 0; }
+            [](const std::vector<std::pair<int, long long>>& prefix) { return prefix.size() > 0 && prefix.back().second != 0; }
         )) {
             return current_gamma; 
         }
