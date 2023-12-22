@@ -139,9 +139,14 @@ class Normalize(Visitor):
         for x in map(self, children):
             if isinstance(x, list) and result and isinstance(result[-1], list):
                 result[-1] = reduce_modulo_normal_closure(result[-1] + x)
+            elif isinstance(x, list) and len(x) == 0:
+                continue
             else:
                 result.append(x)
-                
+
+        if len(result) == 0:
+            return []
+            
         if len(result) == 1:
             return result[0]
         
@@ -403,4 +408,5 @@ def permute_generators(word, permutation = "cycle_shift", fdim = None, **kwargs)
             
         return substitute_generators(word, permutation)
     raise ValueError(f'Unknown value of `permutation`: {permutation}')
+
 
