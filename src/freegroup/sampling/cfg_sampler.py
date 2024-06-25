@@ -6,6 +6,7 @@ from itertools import product
 import pickle
 from copy import deepcopy
 from pathlib import Path
+from collections import defaultdict
 
 from typing import List, Dict, Union, Tuple
 
@@ -231,7 +232,11 @@ def __precompute_derivations__(tree: CFGNormalClosureSampler.Tree, max_length: i
     return by_nonterminals, by_productions, by_splits
         
 
-def __reachable__(g: CFG, v = None, used = None):
+def __reachable__(g: CFG, v = None, used = None, productions_by_nonterminal=None):
+    if productions_by_nonterminal is None:
+        productions_by_nonterminal = defaultdict(lambda: [])
+        for p in g.productions():
+            productions_by_nonterminal[p.lhs()].append(p)
     
     productions = []
     
@@ -241,11 +246,11 @@ def __reachable__(g: CFG, v = None, used = None):
     if v in used: return []
     used.add(v)
     
-    for p in filter(lambda x: x.lhs() == v, g.productions()):
+    for p in productions_by_nonterminal[v]:
         productions.append(p)
-        for u in p.rhs(): productions.extend(__reachable__(g, u, used))
+        for u in p.rhs(): productions.extend(__reachable__(g, u, used, productions_by_nonterminal))
     
-    return productions     
+    return productions
 
 
 def __build_grammar__(closure: List[int], fdim: int = 2) -> CFG:
