@@ -232,6 +232,11 @@ def magnus_reduce_modulo_normal_closure(word, relator, T=None):
 
     return impl_reduce_word_problem(word, relator, T)
 
+def batch_magnus_reduce_modulo_normal_closure(words, closure = None):
+    return [magnus_reduce_modulo_normal_closure(x, closure) for x in words]
+
+def batch_magnus_is_from_normal_closure(words, closure = None):
+    return [magnus_is_from_normal_closure(x, closure) for x in words]
 
 def impl_reduce_word_problem(word, relator, T=None):
     # global #current_depth
