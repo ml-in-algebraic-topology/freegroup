@@ -221,7 +221,8 @@ def psi_pseudo_inverse(word, t, x, alpha, beta):
             
 
 def magnus_is_from_normal_closure(word, relator, T=None):
-    w = magnus_reduce_modulo_normal_closure(word, relator, T)
+    T = set() if T is None else set([abs(LetterWithSubscript(x)) for x in T])
+    w = magnus_reduce_modulo_normal_closure(word, relator, T)    
     return not w or all([x in T for x in w])
 
 
