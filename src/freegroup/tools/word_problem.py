@@ -240,7 +240,6 @@ def batch_magnus_is_from_normal_closure(words, closure=None, n_proc=None):
     if n_proc is not None and n_proc > 1:
         with mp.Pool(n_proc) as pool:
             results = pool.starmap(magnus_is_from_normal_closure, [(word, closure) for word in words])
-            
     else:
         results = [magnus_is_from_normal_closure(x, closure) for x in words]
     return results
