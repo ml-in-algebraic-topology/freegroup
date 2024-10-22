@@ -233,21 +233,21 @@ def magnus_reduce_modulo_normal_closure(word, relator, T=None):
 
     return impl_reduce_word_problem(word, relator, T)
 
-def batch_magnus_reduce_modulo_normal_closure(words, closure=None, n_proc=None):
+def batch_magnus_reduce_modulo_normal_closure(words, closures=None, n_proc=None):
     if n_proc is not None and n_proc > 1:
         with mp.Pool(n_proc) as pool:
-            results = pool.starmap(magnus_reduce_modulo_normal_closure, [(word, closure) for word in words])
+            results = pool.starmap(magnus_reduce_modulo_normal_closure, [word_closure for word_closure in zip(words, closures)])
     else:
-        results = [magnus_reduce_modulo_normal_closure(word, closure) for word in words]
+        results = [magnus_reduce_modulo_normal_closure(*word_closure) for word_closure in zip(words, closures)]
 
     return results
 
-def batch_magnus_is_from_normal_closure(words, closure=None, n_proc=None):
+def batch_magnus_is_from_normal_closure(words, closures=None, n_proc=None):
     if n_proc is not None and n_proc > 1:
         with mp.Pool(n_proc) as pool:
-            results = pool.starmap(magnus_is_from_normal_closure, [(word, closure) for word in words])
+            results = pool.starmap(magnus_is_from_normal_closure, [word_closure for word_closure in zip(words, closures)])
     else:
-        results = [magnus_is_from_normal_closure(word, closure) for word in words]
+        results = [magnus_is_from_normal_closure(*word_closure) for word_closure in zip(words, closures)]
     return results
 
 def impl_reduce_word_problem(word, relator, T=None):
