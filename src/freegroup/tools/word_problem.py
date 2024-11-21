@@ -5,7 +5,7 @@ from .tools import (
 )
 from collections import defaultdict
 from copy import deepcopy
-
+import multiprocessing as mp
 
 #current_depth = 0
 
@@ -221,7 +221,8 @@ def psi_pseudo_inverse(word, t, x, alpha, beta):
             
 
 def magnus_is_from_normal_closure(word, relator, T=None):
-    w = magnus_reduce_modulo_normal_closure(word, relator, T)
+    T = set() if T is None else set([abs(LetterWithSubscript(x)) for x in T])
+    w = magnus_reduce_modulo_normal_closure(word, relator, T)    
     return not w or all([x in T for x in w])
 
 
@@ -232,6 +233,22 @@ def magnus_reduce_modulo_normal_closure(word, relator, T=None):
 
     return impl_reduce_word_problem(word, relator, T)
 
+def batch_magnus_reduce_modulo_normal_closure(words, closures=None, n_proc=None):
+    if n_proc is not None and n_proc > 1:
+        with mp.Pool(n_proc) as pool:
+            results = pool.starmap(magnus_reduce_modulo_normal_closure, [word_closure for word_closure in zip(words, closures)])
+    else:
+        results = [magnus_reduce_modulo_normal_closure(*word_closure) for word_closure in zip(words, closures)]
+
+    return results
+
+def batch_magnus_is_from_normal_closure(words, closures=None, n_proc=None):
+    if n_proc is not None and n_proc > 1:
+        with mp.Pool(n_proc) as pool:
+            results = pool.starmap(magnus_is_from_normal_closure, [word_closure for word_closure in zip(words, closures)])
+    else:
+        results = [magnus_is_from_normal_closure(*word_closure) for word_closure in zip(words, closures)]
+    return results
 
 def impl_reduce_word_problem(word, relator, T=None):
     # global #current_depth
