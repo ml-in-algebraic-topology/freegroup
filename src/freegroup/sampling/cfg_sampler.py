@@ -11,6 +11,11 @@ from collections import defaultdict
 from typing import List, Dict, Union, Tuple
 
 
+class CFGNormalClosureSamplerError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class CFGNormalClosureSampler:
     
     Tree = List[List[Union[Tuple, int]]]
@@ -152,10 +157,10 @@ class CFGNormalClosureSampler:
     def sample(self, length: int, nt: int, verbose: int = 0, rng = None):
         
         if length <= 0:
-            raise ValueError('length should be greater than 0')
+            raise CFGNormalClosureSamplerError('length should be greater than 0')
             
         if self._by_nonterminals[min(self._max_length, length) - 1][nt] == 0:
-            raise ValueError(f'there is no words of length: {length}')
+            raise CFGNormalClosureSamplerError(f'there is no words of length: {length}')
 
         if rng is None:
             rng = np.random.default_rng()
