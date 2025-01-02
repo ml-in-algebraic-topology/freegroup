@@ -1,2 +1,2 @@
 from .sampling import *
-from .cfg_sampler import CFGNormalClosureSampler
+from .cfg_sampler import CFGNormalClosureSampler, CFGNormalClosureSamplerError
