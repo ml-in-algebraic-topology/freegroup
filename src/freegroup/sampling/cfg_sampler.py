@@ -15,6 +15,11 @@ class CFGNormalClosureSamplerError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+class NoViableTransitionsFoundError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 
 class CFGNormalClosureSampler:
     
@@ -48,13 +53,16 @@ class CFGNormalClosureSampler:
         kwargs = deepcopy(kwargs)
         precompute_kwargs = remove_prefix("precompute", kwargs)
         init_kwargs = remove_prefix("init", kwargs)
+
+        if len(closure) % 2 == 0 and max_length % 2 == 0:
+            print("WARNING: Consider using odd `max_length` when `closure` is even")
         
         filename, cache_dir = CFGNormalClosureSampler._default_cache_dir_and_filename(closure, fdim, filename, cache_dir)
         
-        if (cache_dir / filename).is_file() and load_cache:
+        if load_cache and (cache_dir / filename).is_file():
             return CFGNormalClosureSampler.load(closure, fdim, filename = filename, cache_dir = cache_dir, **init_kwargs)
         
-        if (cache_dir / filename).is_file() and not load_cache and not overwrite and save:
+        if not load_cache and not overwrite and save and (cache_dir / filename).is_file():
             raise ValueError('Either set `overwrite` to `True` or set `save` to `False` or provide another path')
         
         grammar = __build_grammar__(closure, fdim)
@@ -106,6 +114,9 @@ class CFGNormalClosureSampler:
         by_splits: List[List[List[PrecomputedProbas]]],
         normalize = False,
     ):
+        if len(closure) % 2 == 0 and len(by_nonterminals) % 2 == 0:
+            print("WARNING: Using even `max_length` with even `closure`. Consider re-building (calling `build` with `load_cache=False`) sampler with odd `max_length`")
+        
         self._tree = tree
         self._closure = closure
         self._by_nonterminals = by_nonterminals
@@ -133,48 +144,68 @@ class CFGNormalClosureSampler:
             )
             
         
-    def __call__(self, length: int, **kwargs):
-        return self.sample(length, nt = 0, **kwargs)
-    
-    
-    def _overlength_choice(self, length: int, nt: int, rng):
+    def __call__(self, length: int, n_tries: int = 1, rng = None, **kwargs):
+        if rng is None:
+            rng = np.random.default_rng()
+        if isinstance(rng, int):
+            rng = np.random.default_rng(seed = rng)
+        try:
+            return self.sample(length, nt = 0, rng = rng, **kwargs)
+        except NoViableTransitionsFoundError as ex:
+            if n_tries == 1:
+                raise ex
+                
+            # try another rng
+            rng.random()
+            
+            return self(length, None if n_tries is None else n_tries - 1, rng = rng, **kwargs)
+
+
+    def _overlength_possible_transitions(self, length: int, nt: int):
         possible_transitions = []
+
         for k, p in product(range(length - 1), self._tree[nt]):
+            
             if isinstance(p, int):
                 continue
-            if len(self._closure) % 2 == 0 and (k + 1) % 2 != 0:
+                
+            b, c = p
+            
+            if k + 1 <= self._max_length and self._by_nonterminals[k][b] == 0:
                 continue
 
-            b, c = p
+            if length - k - 1 <= self._max_length and self._by_nonterminals[length - k - 1 - 1][c] == 0:
+                continue
+
             if self._by_nonterminals[min(self._max_length, k + 1) - 1][b] == 0 or\
                 self._by_nonterminals[min(self._max_length, length - k - 1) - 1][c] == 0:
                 continue
+            
             possible_transitions.append((b, c, k))
-        
-        return rng.choice(possible_transitions)
+
+        return possible_transitions
         
         
     def sample(self, length: int, nt: int, verbose: int = 0, rng = None):
         
         if length <= 0:
             raise CFGNormalClosureSamplerError('length should be greater than 0')
-            
-        if self._by_nonterminals[min(self._max_length, length) - 1][nt] == 0:
-            raise CFGNormalClosureSamplerError(f'there is no words of length: {length}')
 
-        if rng is None:
-            rng = np.random.default_rng()
-        if isinstance(rng, int):
-            rng = np.random.default_rng(seed = rng)
+        if length <= self._max_length and self._by_nonterminals[length - 1][nt] == 0:
+            raise CFGNormalClosureSamplerError(f'there is no words of length: {length}')
 
         if length == 1:
             return [rng.choice([p for p in self._tree[nt] if isinstance(p, int)])]
         
         if length > self._max_length:
             if verbose > 0:
-                print('WARNING: Using overlength sampling strategy')
-        
-            b, c, k = self._overlength_choice(length, nt, rng)
+                print('WARNING: Using overlength sampling strategy. For better performance please use `length` < 2 * max_length. To suppress messages set `verbose=0`')
+
+            possible_transitions = self._overlength_possible_transitions(length, nt)
+            if len(possible_transitions) == 0:
+                raise NoViableTransitionsFoundError("Could not find suitable split, please check that if your closure is even, then precomputed length should be odd. If your `rng` is not a number try increasing `n_tries`")
+                
+            b, c, k = rng.choice(possible_transitions)
         else:
             p_idx = rng.choice(len(self._tree[nt]), p = self._by_productions[length - 1][nt])
             k     = rng.choice(length - 1, p = self._by_splits[length - 1][nt][p_idx])
