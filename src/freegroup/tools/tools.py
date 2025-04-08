@@ -197,7 +197,7 @@ def is_from_normal_closure(word, closure = None):
 def batch_is_from_normal_closure(words, closure = None):
     return [is_from_normal_closure(x, closure) for x in words]
 
-def list_to_sage(word, gens):        
+def to_sage(word, gens):        
     return reduce(
         lambda x, y: x * y,
         [gens[abs(x) - 1] if x > 0 else gens[abs(x) - 1] ** -1 for x in word]
@@ -211,9 +211,9 @@ def is_from_normal_closure_sage(word, closure=None, fdim=None):
     F = FreeGroup(fdim)
 
     if closure is not None:
-        F = F / [list_to_sage(closure, F.gens())]
+        F = F / [to_sage(closure, F.gens())]
 
-    return list_to_sage(word, F.gens()).is_one()
+    return to_sage(word, F.gens()).is_one()
 
 
 def batch_is_from_normal_closure_sage(words, closure=None, fdim=None):
@@ -224,9 +224,9 @@ def batch_is_from_normal_closure_sage(words, closure=None, fdim=None):
     F = FreeGroup(fdim)
 
     if closure is not None:
-        F = F / [list_to_sage(closure, F.gens())]
+        F = F / [to_sage(closure, F.gens())]
 
-    return [list_to_sage(w, F.gens()).is_one() for w in words]
+    return [to_sage(w, F.gens()).is_one() for w in words]
     
 
 
