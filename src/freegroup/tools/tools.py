@@ -194,9 +194,40 @@ def batch_reduce_modulo_normal_closure(words, closure = None):
 def is_from_normal_closure(word, closure = None):
     return len(reduce_modulo_normal_closure(word, closure)) == 0
 
-
 def batch_is_from_normal_closure(words, closure = None):
     return [is_from_normal_closure(x, closure) for x in words]
+
+def list_to_sage(word, gens):        
+    return reduce(
+        lambda x, y: x * y,
+        [gens[abs(x) - 1] if x > 0 else gens[abs(x) - 1] ** -1 for x in word]
+    )
+
+def is_from_normal_closure_sage(word, closure=None, fdim=None):
+    if fdim is None:
+        fdim = determine_fdim(closure if closure else word)
+
+    from sage.all import FreeGroup
+    F = FreeGroup(fdim)
+
+    if closure is not None:
+        F = F / [list_to_sage(closure, F.gens())]
+
+    return list_to_sage(word, F.gens()).is_one()
+
+
+def batch_is_from_normal_closure_sage(words, closure=None, fdim=None):
+    if fdim is None:
+        fdim = determine_fdim(closure if closure else words[0])
+
+    from sage.all import FreeGroup
+    F = FreeGroup(fdim)
+
+    if closure is not None:
+        F = F / [list_to_sage(closure, F.gens())]
+
+    return [list_to_sage(w, F.gens()).is_one() for w in words]
+    
 
 
 @dataclass
